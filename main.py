@@ -153,7 +153,7 @@ class QueueSystem:
             if event.event_time > self.simulation_time:
                 break
             self.time = event.event_time
-
+            
             if isinstance(event, ArrivalEvent):
                 self.handle_arrival(event)
                 arrival = self.generate_arrival()
