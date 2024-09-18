@@ -2,6 +2,7 @@ import math
 import random
 from LoadingBar import LoadingBar
 from heapq import heappop, heappush
+import matplotlib.pyplot as plt 
 
 
 class ExponentialDistribution:
@@ -67,7 +68,6 @@ class QueueSystem:
         self.transmission_rate = transmission_rate
         self.buffer_size = buffer_size
         self.simulation_time = simulation_time
-        self.number_packets = 100_000
         self.packet_length = packet_length
 
         self.queue: list[float] = []  # Queue of packet lengths
@@ -92,13 +92,13 @@ class QueueSystem:
     def generate_arrival(self):
         """Generates the next packet arrival based on the arrival process"""
         arrival_time = self.time + self.random.generate(self.arival_param)
-        packet_length = self.random.generate(self.packet_length)
-        print(f"Packet length: {packet_length}")
+        packet_length = self.random.generate(
+            self.packet_length) * self.transmission_rate * 5
         return ArrivalEvent(arrival_time, packet_length)
 
     def generate_observer(self):
         """Generates an observer event"""
-        observer_time = self.time + (self.arival_param / 5)
+        observer_time = self.time + self.random.generate(self.arival_param) / 5
         return ObserverEvent(observer_time)
 
     def handle_arrival(self, event: ArrivalEvent):
@@ -114,8 +114,6 @@ class QueueSystem:
         else:
             self.packets_lost += 1  # Packet dropped because the buffer is full
 
-        # print(f"\033[91mPacket {self.Na} arrived at time {self.time}\033[0m")
-
     def handle_departure(self, event: DepartureEvent):
         """Handles a departure event"""
         self.Nd += 1
@@ -126,8 +124,6 @@ class QueueSystem:
                 service_time = next_packet_length / self.transmission_rate
                 departure_time = self.time + service_time
                 self.schedule_event(DepartureEvent(departure_time))
-
-        # print(f"\033[92mPacket {self.Nd} departed at time {self.time}\033[0m")
 
     def handle_observer(self, event: ObserverEvent):
         """Handles an observer event"""
@@ -145,24 +141,25 @@ class QueueSystem:
         return E_N, P_IDLE, P_LOSS
 
     def run_simulation(self):
-        """Runs the DES simulation"""
-
-        # Generate the arrival events
+        loadbar = LoadingBar(self.simulation_time * 3)
+        loadbar.set_text("Generating arrivals...\t")
         while self.time < self.simulation_time:
             arrival = self.generate_arrival()
             self.schedule_event(arrival)
             self.time = arrival.event_time
+            loadbar.set_progress(self.time)
 
-        # Generate the observer events
+        loadbar.set_text("Generating observers...\t")
         self.time = 0
         while self.time < self.simulation_time:
             observer = self.generate_observer()
             self.schedule_event(observer)
             self.time = observer.event_time
-  
+            loadbar.set_progress(self.time + self.simulation_time)
+
+        """Runs the DES simulation"""
+        loadbar.set_text("Running simulation...\t")
         self.time = 0
-        print("Running simulation:")
-        loadbar = LoadingBar(self.simulation_time)
         while self.event_list and self.time < self.simulation_time:
             # Get the next event
             event = heappop(self.event_list)
@@ -170,7 +167,7 @@ class QueueSystem:
                 break
             self.time = event.event_time
 
-            loadbar.set_progress(self.time)
+            loadbar.set_progress(self.time + self.simulation_time * 2)
 
             if isinstance(event, ArrivalEvent):
                 self.handle_arrival(event)
@@ -181,19 +178,48 @@ class QueueSystem:
             elif isinstance(event, ObserverEvent):
                 self.handle_observer(event)
 
-        loadbar.set_progress(self.simulation_time)
+        loadbar.set_progress(self.simulation_time * 3)
         self.idle_time += self.simulation_time - self.last_event_time
         print()
         return self.calculate_metrics()
 
 
-# Example usage:
 if __name__ == "__main__":
-    queue_system = QueueSystem(simulation_time=1_000, transmission_rate=1_000_000,
-                               packet_length=2000, queue_utilization=0.25, buffer_size=float('inf'))
+    utilizations = list(range(25, 95))
+    E_N_values: list[float] = []
+    P_IDLE_values: list[float] = []
 
-    E_N, P_IDLE, P_LOSS = queue_system.run_simulation()
+    for row in utilizations:
+        queue_system = QueueSystem(simulation_time=1000, transmission_rate=1_000_000,
+                                   packet_length=2000, queue_utilization=row / 100, buffer_size=float('inf'))
 
-    print(f"Average number of packets in queue (E[N]): {E_N}")
-    print(f"Proportion of idle time (P_IDLE): {P_IDLE}")
-    print(f"Probability of packet loss (P_LOSS): {P_LOSS}")
+        E_N, P_IDLE, P_LOSS = queue_system.run_simulation()
+
+        E_N_values.append(E_N)
+        P_IDLE_values.append(P_IDLE * 100)  # Convert to percentage
+
+        print(f"Utilization: {row / 100}")
+        print(f"Average number of packets in queue (E[N]): {E_N}")
+        print(f"Proportion of idle time (P_IDLE): {P_IDLE * 100:.2f}%")
+        print(f"Probability of packet loss (P_LOSS): {P_LOSS * 100:.2f}%")
+        print()
+
+       # Plotting E[N]
+    plt.figure(figsize=(10, 5))
+    plt.plot(utilizations, E_N_values, marker='o', linestyle='-', color='b')
+    plt.title('Average Number of Packets in Queue (E[N]) vs. Utilization')
+    plt.xlabel('Utilization (%)')
+    plt.ylabel('Average Number of Packets in Queue (E[N])')
+    plt.grid(True)
+    plt.savefig('average_packets_in_queue.png')  # Save the figure
+    plt.close()  # Close the figure
+    
+    # Plotting P_IDLE
+    plt.figure(figsize=(10, 5))
+    plt.plot(utilizations, P_IDLE_values, marker='o', linestyle='-', color='r')
+    plt.title('Proportion of Idle Time (P_IDLE) vs. Utilization')
+    plt.xlabel('Utilization (%)')
+    plt.ylabel('Proportion of Idle Time (P_IDLE) [%]')
+    plt.grid(True)
+    plt.savefig('proportion_idle_time.png')  # Save the figure
+    plt.close()  # Close the figure
