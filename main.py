@@ -2,7 +2,7 @@ import math
 import random
 from LoadingBar import LoadingBar
 from heapq import heappop, heappush
-import matplotlib.pyplot as plt 
+import csv
 
 
 class ExponentialDistribution:
@@ -14,8 +14,7 @@ class ExponentialDistribution:
         EPOCH = 1000
 
         # Generate samples
-        samples: list[float] = [self.generate(
-            RATE_PARAMETER) for _ in range(EPOCH)]
+        samples: list[float] = [self.generate(RATE_PARAMETER) for _ in range(EPOCH)]
 
         # Calculate mean and variance
         mean = sum(samples) / EPOCH
@@ -141,24 +140,12 @@ class QueueSystem:
         return E_N, P_IDLE, P_LOSS
 
     def run_simulation(self):
-        loadbar = LoadingBar(self.simulation_time * 3)
-        loadbar.set_text("Generating arrivals...\t")
-        while self.time < self.simulation_time:
-            arrival = self.generate_arrival()
-            self.schedule_event(arrival)
-            self.time = arrival.event_time
-            loadbar.set_progress(self.time)
-
-        loadbar.set_text("Generating observers...\t")
-        self.time = 0
-        while self.time < self.simulation_time:
-            observer = self.generate_observer()
-            self.schedule_event(observer)
-            self.time = observer.event_time
-            loadbar.set_progress(self.time + self.simulation_time)
+        arrival = self.generate_arrival()
+        self.schedule_event(arrival)
+        observer = self.generate_observer()
+        self.schedule_event(observer)
 
         """Runs the DES simulation"""
-        loadbar.set_text("Running simulation...\t")
         self.time = 0
         while self.event_list and self.time < self.simulation_time:
             # Get the next event
@@ -167,18 +154,19 @@ class QueueSystem:
                 break
             self.time = event.event_time
 
-            loadbar.set_progress(self.time + self.simulation_time * 2)
-
             if isinstance(event, ArrivalEvent):
                 self.handle_arrival(event)
+                arrival = self.generate_arrival()
+                self.schedule_event(arrival)
                 self.last_event_time = self.time
             elif isinstance(event, DepartureEvent):
                 self.handle_departure(event)
                 self.last_event_time = self.time
             elif isinstance(event, ObserverEvent):
                 self.handle_observer(event)
+                observer = self.generate_observer()
+                self.schedule_event(observer)
 
-        loadbar.set_progress(self.simulation_time * 3)
         self.idle_time += self.simulation_time - self.last_event_time
         print()
         return self.calculate_metrics()
@@ -204,22 +192,8 @@ if __name__ == "__main__":
         print(f"Probability of packet loss (P_LOSS): {P_LOSS * 100:.2f}%")
         print()
 
-       # Plotting E[N]
-    plt.figure(figsize=(10, 5))
-    plt.plot(utilizations, E_N_values, marker='o', linestyle='-', color='b')
-    plt.title('Average Number of Packets in Queue (E[N]) vs. Utilization')
-    plt.xlabel('Utilization (%)')
-    plt.ylabel('Average Number of Packets in Queue (E[N])')
-    plt.grid(True)
-    plt.savefig('average_packets_in_queue.png')  # Save the figure
-    plt.close()  # Close the figure
-    
-    # Plotting P_IDLE
-    plt.figure(figsize=(10, 5))
-    plt.plot(utilizations, P_IDLE_values, marker='o', linestyle='-', color='r')
-    plt.title('Proportion of Idle Time (P_IDLE) vs. Utilization')
-    plt.xlabel('Utilization (%)')
-    plt.ylabel('Proportion of Idle Time (P_IDLE) [%]')
-    plt.grid(True)
-    plt.savefig('proportion_idle_time.png')  # Save the figure
-    plt.close()  # Close the figure
+    with open('simulation_results.csv', mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(['Utilization', 'E[N]', 'P_IDLE'])
+        for i in range(len(utilizations)):
+            writer.writerow([utilizations[i], E_N_values[i], P_IDLE_values[i]])
