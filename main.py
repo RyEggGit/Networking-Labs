@@ -6,8 +6,7 @@ from heapq import heappop, heappush
 
 class ExponentialDistribution:
     def generate(self, parameter: float) -> float:
-        U = random.random()
-        return (-1/parameter) * math.log(1 - U)
+        return (-1/parameter) * math.log(1 - random.random())
 
     def simulate(self) -> None:
         RATE_PARAMETER = 75
@@ -64,12 +63,12 @@ class ObserverEvent(Event):
 
 
 class QueueSystem:
-    def __init__(self, simulation_time: float, transmission_rate: float, number_packets: int, packet_length_param: int = 2000, buffer_size: float = float('inf')):
+    def __init__(self, simulation_time: float, transmission_rate: float, queue_utilization: float, packet_length: float, buffer_size: float = float('inf'),):
         self.transmission_rate = transmission_rate
         self.buffer_size = buffer_size
         self.simulation_time = simulation_time
-        self.number_packets = number_packets
-        self.packet_length_param = packet_length_param
+        self.number_packets = 100_000
+        self.packet_length = packet_length
 
         self.queue: list[float] = []  # Queue of packet lengths
         self.event_list: list[Event] = []  # Priority queue for events
@@ -82,9 +81,9 @@ class QueueSystem:
         self.last_event_time = 0
         self.packets_lost = 0
 
+        self.arival_param = (queue_utilization *
+                             transmission_rate) / packet_length
         self.random = ExponentialDistribution()
-
-        self.loading_bar = LoadingBar(simulation_time)
 
     def schedule_event(self, event: Event):
         """Adds an event to the event list (priority queue)"""
@@ -92,13 +91,14 @@ class QueueSystem:
 
     def generate_arrival(self):
         """Generates the next packet arrival based on the arrival process"""
-        arrival_time = self.random.generate(self.transmission_rate)
-        packet_length = self.random.generate(self.packet_length_param)
+        arrival_time = self.time + self.random.generate(self.arival_param)
+        packet_length = self.random.generate(self.packet_length)
+        print(f"Packet length: {packet_length}")
         return ArrivalEvent(arrival_time, packet_length)
 
-    def generate_observer(self, previous_time: float):
+    def generate_observer(self):
         """Generates an observer event"""
-        observer_time = previous_time + 0.1
+        observer_time = self.time + (self.arival_param / 5)
         return ObserverEvent(observer_time)
 
     def handle_arrival(self, event: ArrivalEvent):
@@ -114,6 +114,8 @@ class QueueSystem:
         else:
             self.packets_lost += 1  # Packet dropped because the buffer is full
 
+        # print(f"\033[91mPacket {self.Na} arrived at time {self.time}\033[0m")
+
     def handle_departure(self, event: DepartureEvent):
         """Handles a departure event"""
         self.Nd += 1
@@ -125,6 +127,8 @@ class QueueSystem:
                 departure_time = self.time + service_time
                 self.schedule_event(DepartureEvent(departure_time))
 
+        # print(f"\033[92mPacket {self.Nd} departed at time {self.time}\033[0m")
+
     def handle_observer(self, event: ObserverEvent):
         """Handles an observer event"""
         self.No += 1
@@ -133,6 +137,8 @@ class QueueSystem:
 
     def calculate_metrics(self):
         """Calculates performance metrics"""
+        print(f"Total packets in queue: {self.total_packets_in_queue}")
+
         E_N = self.total_packets_in_queue / self.No if self.No > 0 else 0
         P_IDLE = self.idle_time / self.simulation_time
         P_LOSS = self.packets_lost / self.Na if self.Na > 0 else 0
@@ -140,22 +146,31 @@ class QueueSystem:
 
     def run_simulation(self):
         """Runs the DES simulation"""
-        # Generate the arrival packets
-        for _ in range(self.number_packets):
+
+        # Generate the arrival events
+        while self.time < self.simulation_time:
             arrival = self.generate_arrival()
             self.schedule_event(arrival)
+            self.time = arrival.event_time
 
-        # Initalize the observers events
-        observer = self.generate_observer(0)
-        self.schedule_event(observer)
-
+        # Generate the observer events
+        self.time = 0
+        while self.time < self.simulation_time:
+            observer = self.generate_observer()
+            self.schedule_event(observer)
+            self.time = observer.event_time
+  
+        self.time = 0
+        print("Running simulation:")
+        loadbar = LoadingBar(self.simulation_time)
         while self.event_list and self.time < self.simulation_time:
             # Get the next event
             event = heappop(self.event_list)
             if event.event_time > self.simulation_time:
                 break
             self.time = event.event_time
-            self.loading_bar.set_progress(self.time)
+
+            loadbar.set_progress(self.time)
 
             if isinstance(event, ArrivalEvent):
                 self.handle_arrival(event)
@@ -165,11 +180,8 @@ class QueueSystem:
                 self.last_event_time = self.time
             elif isinstance(event, ObserverEvent):
                 self.handle_observer(event)
-                observer = self.generate_observer(event.event_time)
-                self.schedule_event(observer)
 
-            
-        self.loading_bar.set_progress(self.simulation_time)
+        loadbar.set_progress(self.simulation_time)
         self.idle_time += self.simulation_time - self.last_event_time
         print()
         return self.calculate_metrics()
@@ -177,8 +189,9 @@ class QueueSystem:
 
 # Example usage:
 if __name__ == "__main__":
-    queue_system = QueueSystem(simulation_time=20_000, transmission_rate=1_000_000,
-                               packet_length_param=2000, number_packets=100_000, buffer_size=1000)
+    queue_system = QueueSystem(simulation_time=1_000, transmission_rate=1_000_000,
+                               packet_length=2000, queue_utilization=0.25, buffer_size=float('inf'))
+
     E_N, P_IDLE, P_LOSS = queue_system.run_simulation()
 
     print(f"Average number of packets in queue (E[N]): {E_N}")
