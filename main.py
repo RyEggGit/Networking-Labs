@@ -1,6 +1,6 @@
 import math
 import random
-from LoadingBar import LoadingBar
+import itertools
 from heapq import heappop, heappush
 import csv
 
@@ -25,8 +25,7 @@ class ExponentialDistribution:
         expected_variance = (1 / RATE_PARAMETER) ** 2
 
         print(f'Mean: {mean:.16f} (expected: {expected_mean:.16f})')
-        print(f'Variance: {variance:.16f} (expected: {
-              expected_variance:.16f})')
+        print(f'Variance: {variance:.16f} (expected: {expected_variance:.16f})')
 
 
 class Event:
@@ -80,8 +79,9 @@ class QueueSystem:
         self.last_event_time = 0
         self.packets_lost = 0
 
-        self.arival_param = (queue_utilization *
+        self.arrival_rate = (queue_utilization *
                              transmission_rate) / packet_length
+        self.oberserver_rate = self.arrival_rate * 5
         self.random = ExponentialDistribution()
 
     def schedule_event(self, event: Event):
@@ -90,14 +90,13 @@ class QueueSystem:
 
     def generate_arrival(self):
         """Generates the next packet arrival based on the arrival process"""
-        arrival_time = self.time + self.random.generate(self.arival_param)
-        packet_length = self.random.generate(
-            self.packet_length) * self.transmission_rate * 5
+        arrival_time = self.time + self.random.generate(self.arrival_rate)
+        packet_length = self.random.generate(1/self.packet_length)
         return ArrivalEvent(arrival_time, packet_length)
 
     def generate_observer(self):
         """Generates an observer event"""
-        observer_time = self.time + self.random.generate(self.arival_param) / 5
+        observer_time = self.time + self.random.generate(self.oberserver_rate)
         return ObserverEvent(observer_time)
 
     def handle_arrival(self, event: ArrivalEvent):
@@ -145,7 +144,7 @@ class QueueSystem:
         observer = self.generate_observer()
         self.schedule_event(observer)
 
-        """Runs the DES simulation"""
+        # Runs the DES simulation 
         self.time = 0
         while self.event_list and self.time < self.simulation_time:
             # Get the next event
@@ -173,27 +172,31 @@ class QueueSystem:
 
 
 if __name__ == "__main__":
-    utilizations = list(range(25, 95))
-    E_N_values: list[float] = []
-    P_IDLE_values: list[float] = []
+    utilizations = [round(x, 1) for x in list(itertools.takewhile(lambda x: x <= 1.5, itertools.count(0.5, 0.1)))]
+    buffer_sizes = [10, 25, 50]
+    
+    results = {K: {'P_IDLE': [], 'P_LOSS': []} for K in buffer_sizes}
 
-    for row in utilizations:
-        queue_system = QueueSystem(simulation_time=1000, transmission_rate=1_000_000,
-                                   packet_length=2000, queue_utilization=row / 100, buffer_size=float('inf'))
+    for K in buffer_sizes:
+        for rho in utilizations:
+            queue_system = QueueSystem(simulation_time=1000, transmission_rate=1_000_000,
+                                       packet_length=2000, queue_utilization=rho, buffer_size=K)
 
-        E_N, P_IDLE, P_LOSS = queue_system.run_simulation()
+            E_N, P_IDLE, P_LOSS = queue_system.run_simulation()
 
-        E_N_values.append(E_N)
-        P_IDLE_values.append(P_IDLE * 100)  # Convert to percentage
+            results[K]['P_IDLE'].append(P_IDLE * 100)  # Convert to percentage
+            results[K]['P_LOSS'].append(P_LOSS * 100)  # Convert to percentage
 
-        print(f"Utilization: {row / 100}")
-        print(f"Average number of packets in queue (E[N]): {E_N}")
-        print(f"Proportion of idle time (P_IDLE): {P_IDLE * 100:.2f}%")
-        print(f"Probability of packet loss (P_LOSS): {P_LOSS * 100:.2f}%")
-        print()
+            print(f"Buffer Size (K): {K}, Utilization: {rho}")
+            print(f"Proportion of idle time (P_IDLE): {P_IDLE * 100:.2f}%")
+            print(f"Probability of packet loss (P_LOSS): {P_LOSS * 100:.2f}%")
+            print()
 
-    with open('simulation_results.csv', mode='w', newline='') as file:
+    with open('simulation_results6.csv', mode='w', newline='') as file:
         writer = csv.writer(file)
-        writer.writerow(['Utilization', 'E[N]', 'P_IDLE'])
-        for i in range(len(utilizations)):
-            writer.writerow([utilizations[i], E_N_values[i], P_IDLE_values[i]])
+        writer.writerow(['Buffer Size', 'Utilization', 'P_IDLE', 'P_LOSS'])
+        for K in buffer_sizes:
+             for i in range(len(utilizations)):
+                writer.writerow([K, utilizations[i], results[K]['P_IDLE'][i], results[K]['P_LOSS'][i]])
+
+
