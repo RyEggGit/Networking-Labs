@@ -172,6 +172,8 @@ class QueueSystem:
 
 
 if __name__ == "__main__":
+
+    # Script for question 6 
     utilizations = [round(x, 1) for x in list(itertools.takewhile(lambda x: x <= 1.5, itertools.count(0.5, 0.1)))]
     buffer_sizes = [10, 25, 50]
     
