@@ -36,11 +36,15 @@ P<sub>IDLE</sub>. Do not show code.*
 
 *Explain the trends in both graphs*
 
-1. As the queue utilization (ρ) increases, the trend for the average increases (reciprocally). This is becuase even though the queue is infinite, there is a finite amount of time to process each packet and only one packet can be processed at a time. When a new packet arrives before the last packet has finished, that fills up our queue. The expected value of the time to process a packet can be represented as $\frac{E\left(\frac{1}{L}\right)}{C} = \frac{L}{C}$ and the expected difference of the arrival time is $E\left(\frac{\rho \cdot C}{L}\right) = \frac{L}{C \rho}$. We can clearly see mathematically that on average the queue packets will arrive fasater they can be service by a facotr of $1/\rho$ which is why we see a respirocal relation as $\rho$ approaches $1$. 
+1. As the queue utilization (ρ) increases, the trend for the average increases (reciprocally). This is because even though the queue is infinite, there is a finite amount of time to process each packet, and only one packet can be processed at a time. When a new packet arrives before the last packet has finished, that fills up our queue. The expected value of the time to process a packet can be represented as $\frac{E\left(\frac{1}{L}\right)}{C} = \frac{L}{C}$ and the expected difference of the arrival time is $E\left(\frac{\rho \cdot C}{L}\right) = \frac{L}{C \rho}$. We can see mathematically that, on average, the queue packets will arrive after they can be serviced by a factor of $1/\rho$, which is why we see a reciprocal relation as $\rho$ approaches $1$. 
 
-2. As the queue utilization ($\rho$) increases, the trend for the amount of idle queue time decreases linearly. Since the time spent idiling is max{next arrival (a<sub>i+1</sub>) - (current arrival (a<sub>i</sub>) + service time (s), 0)}
-which we can simplify, this by assuming the current arrival happens at t=0, and with a bit of math we find max{$\frac{L}{C}$ - $\frac{L}{C \rho}$, 0}
-= max{$\frac{L(p-1)}{Cp}$, 0} = max{$\frac{-L(1-p)}{Cp}$, 0} which shows why we get the negative linear relation. 
+2. As the queue utilization ($\rho$) increases, the trend for the amount of idle queue time decreases linearly. Since the time spent idling is max{next arrival (a<sub>i+1</sub>) - (current arrival (a<sub>i</sub>) + service time (s), 0)} which we can simplify, this by assuming the current arrival happens at t=0, and with a bit of math we find 
+
+$$ = max(\frac{L}{C}\rho - \frac{L}{C \rho}, 0) $$
+$$ = max(\frac{L(p-1)}{Cp}, 0) $$
+$$ = max(\frac{-L(1-p)}{Cp}, 0) $$
+
+which shows why we get the negative linear relation. 
 
 ![Graph for Question 3](./plot3.png)
 
@@ -54,7 +58,8 @@ Since $\rho > 1$ the queue will fill faster than it is able to empty itself. Thi
 
 *Build a simulator for an M/M/1/K queue and briefly explain how you implemented packet dropping. Explain in words how you computed P<sub>LOSS</sub>. Do not show code.*
 
-Since I store the events in a priority queue and pop the most recents events repeadetly, all I need to do is increment the queue when a arrival event happens and decrement it when a deperature event occurs. Now that we know the queue length, all the simulator has to do, is during an arrival, if the queu length is larger the buffer size, drop the packet and incrementthe count. To then calculate P<sub>LOSS</sub> all we need to do is diviede this drop countter by the number of arrivals.
+Since I store the events in a priority queue and pop the most recent events repeatedly, I only need to increment the queue when an arrival event happens and decrement it when a departure event occurs. Now that we know the queue length, all the simulator has to do is during an arrival; if the queue length is larger than the buffer size, drop the packet and increment the count. To calculate P<sub>LOSS</sub>, we need to divide this drop count by the number of arrivals.
+
 
 ## Question 6
 *Let L=2000 bits and C=1 Mbps. Use your simulator to obtain the following graphs:*
@@ -63,4 +68,4 @@ Since I store the events in a priority queue and pop the most recents events rep
 *For which value of K does PIDLE reach zero soonest? Why is this the case?*
 
 ![Graph for Question 6](./plot6.png)
-P<sub>IDLE</sub> reaches zero the soonest when the queue is the largest. This is because buffer size is inversely proportional to P<sub>LOSS</sub>. As the queue fills up, smaller queues will drop packets more frequently. When there is a large gap between arrivals, smaller queues can quickly empty their buffers. However, more enormous queues have more capacity and take longer to empty, resulting in less idle time.
+P<sub>IDLE</sub> reaches zero the soonest when the queue is the largest. This is because buffer size is inversely proportional to P<sub>LOSS</sub>. As the queue fills up, smaller queues will drop packets more frequently. Smaller queues can quickly empty their buffers when there is a large gap between arrivals. However, more enormous queues have more capacity and take longer to empty, resulting in less idle time.
