@@ -3,21 +3,110 @@
 ## Question 1
 *Obtain two frames in from the folder "frames" under "Labs" in LEARN (please download the frames according to the last digit of your student ID, i.e., if last digit of ID = i, do frame i and frame i+10. Using the example given in section 2.3 as a template, parse the frames in a human readable format and comment. For example, write an IP address in the dotted decimal notation and header length as a positive integer. Using the frame data you have, show the relevant parts (such as MAC addresses, IP addresses etc). It is a good idea to use a table for this.*
 
-Ethernet Header (Link Layer)
+_Frame #1_
 
-| Frame    | Desitionation Mac | Source Mac        | Type  | CRC  |
-| -------- | ----------------- | ----------------- | ----- | ---- |
-| Frame 8  | 00:15:60:f8:c6:00 | 00:22:19:f4:30:97 | IPv4  |  ??  |
-| Frame 18 | 00:22:19:f4:30:9  | 00:1d:7e:46:ec:49 | IPv4  |  ??  |
+Ethernet Header:
+```
+00 15 60 f8 c6 00: Ethernet destination address is 00:15:60:f8:c6:00 (unicast).
+00 22 19 f4 30 97: Ethernet source address is 00:22:19:f4:30:97 (unicast).
+08 00: The payload type is IP (0x0800).
+```
 
-IP Header (Network Layer)
+IP Header:
+```
+45: This is an IP version 4 datagram.
+00: The header length is 5x4 = 20 bytes. (There is no options field in the given IP header).
+00 83: Total length of the IP datagram is 131 (0x0083) bytes.
+00 00: The identification of this datagram is 0x0000 (for fragmentation purpose).
 
-| Frame    | Version | Header Length | Precedence |      | 
-| -------- | ------- | ------------- | ---------- | ---- |
-| Frame 8  |    4    |   20 bytes    |  routine   |      |
-| Frame 18 |    4    |   20 bytes    |  routine   |      |
+40 00: (0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0):
+1 Don’t Fragment flag set.
+0 More Fragment flag unset.
+The Fragment offset is 0.
+This means that the datagram cannot be fragmented, and there are no fragments after this datagram. With a fragment offset equals to zero, we know that this is the only fragment of a datagram.
 
-_TODO_
+40: Time to live = 64 (0x40), meaning the datagram may exist for at most 64 more hops.
+11: The Protocol on top is UDP (0x11)
+00 d5: This is the checksum of the datagram.
+81 61 2b a7: Source IP address is 129.97.43.167.
+81 61 0b 2c: Destination IP address is 129.97.11.44.
+```
+
+UDP Header:
+```
+57 3c: The Source port is 22332.
+f7 74: The Destination port is 63348.
+00 6f: Length of the UDP header and data is 111 (0x006f) bytes.
+3a 16: Checksum of the UDP segment.
+```
+Data:
+```
+39 14 02 44 78 75 47 66 60 32 d9 f0 8c 2f f0 7e 9e 62 14 67 d8 08 66 9b c4 31 37 92 3b 6b 6a d0 a3 38 6e 8e 8d b1 c8 ac 68 eb 0c f7 d2 b7 ef ad fc 24 49 7d b6 eb e9 68 ca c9 52 a7 bf 2d 13 ba 79 b8 2f a7 9b 39 eb 45 d2 60 88 94 74 0d ae e0 79 7f 34 55 f9 a1 37 e9 ab 3b de be d7 c4 ef 4f 24 ec d2 2e a3 50 e4
+```
+
+Overall:
+The given example frame contains a UDP segment. The Ethernet header indicates that the frame is an IP packet. The IP header specifies that the packet is using the UDP protocol, with a source IP address of 129.97.43.167 and a destination IP address of 129.97.11.44. The UDP header shows that the source port is 22332 and the destination port is 63348, with a total length of 111 bytes for the UDP header and data. The data portion contains the payload of the UDP segment, which is typically application-specific data. This frame is part of a typical UDP communication, where the data is sent without establishing a connection, unlike TCP.
+
+
+_Frame #2_
+
+Ether Net Header:
+```
+00 22 19 f4 30 97: Ethernet destination address is 00:22:19:f4:30:97 (unicast).
+00 1d 7e 46 ec 49: Ethernet source address: 00:1d:7e:46:ec:49 (unicast).
+08 00: The payload type is IPv4 (0x0800). 
+```
+
+IP Header:
+```
+45: This is an IP version 4 datagram.
+00: The header length is 5x4 = 20 bytes. (There is no options field in the given IP header).
+00 ce: Total length of the IP datagram is 206 (0x00ce) bytes.
+77 1c: The identification of this datagram is 0x771c (for fragmentation purpose).
+40 00: (0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0):
+
+1 Don’t Fragment flag set.
+0 More Fragment flag unset.
+The Fragment offset is 0.
+This means that the datagram cannot be fragmented, and there are no fragments after this datagram. With a fragment offset equals to zero, we know that this is the only fragment of a datagram.
+
+7f: Time to live = 127 (0x7f), meaning the datagram may exist for at most 127 more hops.
+06: The Protocol on top is TCP (0x06)
+35 50: This is the checksum of the datagram.
+81 61 0b 2c: Source IP address is 129.97.11.44.
+c0 a8 01 88: Destination IP address is 192.168.1.136.
+```
+
+TCP Header:
+```
+1f 90: The Source port is 8080, which is a port number commonly used for HTTP.
+81 c1: The Destination port is 33089, which is an ephemeral port number.
+3c 22 f7 21: The Seq. no. is 1009733665.
+09 57 5a 25: The Ack no. is 156891429.
+50: Data offset is 20 (5 x 4) bytes. This is the length of the TCP header.
+
+18 (0 0 0 1 1 0 0 0):
+Flags: URG 0 ACK 1 PSH 1
+RST 0 SYN 0 FIN 0
+
+The ACK and PSH flags are set, meaning that the value carried in the acknowledgement field is valid and the data should be pushed to the receiving application immediately.
+01 04: The receiver window size is 260 (0x0104) bytes.
+45 66: Checksum of the whole TCP segment.
+00 00: Urgent pointer (Not used in this segment).
+```
+
+Data (represented as a string):
+```
+HTTP/1.1 200 OK
+Content-type: application/pdf
+Content-length: 25259544
+Connection: close
+Accept-ranges: bytes
+Date: Thu, 14 Mar 2013 22:00:30 GMT
+```
+
+Overall:
+The given example frame contains a TCP segment with both ACK and PSH flags set, indicating that the data should be pushed to the receiving application immediately. The frame includes HTTP data, as evidenced by the "HTTP/1.1 200 OK" response and various HTTP headers. This frame is part of a typical HTTP communication, where the server is responding to a client's request. The data portion contains the HTTP response headers, which are crucial for the client to understand the nature of the response. In this case it appears to be reponse to a request and a pdf is returned (perhaps the UDP request wanted the pdf and this request is the return as the source of this is the destination of the first one).
 
 
 ## Question 2
@@ -54,7 +143,7 @@ ferrero.uwaterloo.ca (129.97.92.52) at 00:25:90:a3:f1:8c [ether] on enp0s31f6
 eceserv1.uwaterloo.ca (129.97.92.160) at ec:0d:9a:3a:cd:12 [ether] on enp0s31f6
 ```
 
-This returns the arp table for my device. We can see the connections to different computers: `Hostname` (`Ip Address`) at `MAC Address` [ether] on (`Information on ethernet, bus number and slot number`)
+This output shows the ARP table for the device, listing the mappings of IP addresses to MAC addresses for devices on eceUbuntu. Each entry includes the hostname, IP address, MAC address, and the network interface (in this case, enp0s31f6). For example, the entry ecesyslog2.uwaterloo.ca (129.97.92.183) at b4:96:91:6a:e7:fc [ether] on enp0s31f6 indicates that the device with the hostname ecesyslog2.uwaterloo.ca and IP address 129.97.92.183 has the MAC address b4:96:91:6a:e7:fc and is connected via the enp0s31f6 interface. The entry ? (169.254.169.254) at <incomplete> on enp0s31f6 shows an incomplete ARP entry, which typically indicates a failed ARP resolution attempt. 
 
 
 ## Question 3
@@ -84,6 +173,35 @@ lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536
         TX packets 1065255846  bytes 1490611216989 (1.4 TB)
         TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
 ```
+The physical Ethernet network interface is denoted by enp0s31f. This dentoes that it is an ethernet connection, aswell its bus number, and slot numers (https://unix.stackexchange.com/questions/134483/why-is-my-ethernet-interface-called-enp0s10-instead-of-eth0)
+
+The loopback interface (lo) is a special, virtual network interface used for internal communication within the host. It allows the system to communicate with itself using network protocols, which is useful for testing and development purposes. The loopback interface is always up and running, and it uses the IP address 127.0.0.1 for IPv4 and ::1 for IPv6. Any traffic sent to these addresses is routed back to the same host, allowing applications to communicate with each other as if they were on a network, without the need for physical network hardware. This is essential for various network services and applications that need to interact with the local system. (https://askubuntu.com/questions/247625/what-is-the-loopback-device-and-how-do-i-use-it)
+
+Interface Type:
+
+- enp0s31f6: This is a physical Ethernet network interface. It is used for actual network communication with other devices on the network.
+- lo: This is a loopback interface. It is a virtual network interface used for internal communication within the host.
+Flags:
+
+-  enp0s31f6: Flags include UP, BROADCAST, RUNNING, and MULTICAST. These indicate that the interface is active, supports broadcasting, is operational, and supports multicast.
+- lo: Flags include UP, LOOPBACK, and RUNNING. These indicate that the interface is active, is a loopback interface, and is operational.
+MTU (Maximum Transmission Unit):
+
+- enp0s31f6: The MTU is 1500 bytes, which is typical for Ethernet networks.
+- lo: The MTU is 65536 bytes, which is much larger and suitable for internal communication without the constraints of physical network limitations.
+IP Addresses:
+
+- enp0s31f6: Has both an IPv4 address (129.97.92.172) and an IPv6 address (fe80::1582:2c3a:8da1:b445).
+- lo: Has an IPv4 address (127.0.0.1) and an IPv6 address (::1). These addresses are reserved for loopback and internal communication.
+Traffic Statistics:
+
+- enp0s31f6: Shows a large amount of traffic, indicating it is used for significant network communication. It has received (RX) 10401840997 packets and transmitted (TX) 21947593259 packets.
+- lo: Also shows a significant amount of traffic but is used for internal communication. It has received (RX) and transmitted (TX) 1065255846 packets.
+Errors and Drops:
+
+- enp0s31f6: Shows some dropped packets (56508), but no errors or overruns.
+- lo: Shows no errors or dropped packets, indicating reliable internal communication.
+
 
 
 
@@ -134,6 +252,9 @@ link-local      0.0.0.0         255.255.0.0     U         0 0          0 enp0s31
 
 Using the command `netstat -r` displays the kernel IP routing table, which includes information about the destination networks, gateways, netmasks, flags, and the network interfaces used for routing. For example, the output might show a default route through a gateway with specific flags and interface details. This routing table is essential for understanding how packets are routed through the network and for diagnosing routing issues.
 
+- The default route directs packets to the gateway v92-e2-rt-1782a if no other specific route matches.
+- The route for the network 129.97.92.0 indicates that packets destined for this network are directly reachable on the local network.
+- The link-local route is used for communication within the local network segment, typically for auto-configuration and local communication. (https://en.wikipedia.org/wiki/Link-local_address#:~:text=In%20computer%20networking%2C%20a%20link,a%20host%20is%20connected%20to)
 
 ## Question 5
 *1. Explain what the nslookup utility does*
@@ -259,5 +380,5 @@ traceroute to www.ug.edu.gh (197.255.125.244), 30 hops max, 60 byte packets
 27  197.255.127.3 (197.255.127.3)  216.379 ms 197.255.125.244 (197.255.125.244)  208.292 ms !X 197.255.127.3 (197.255.127.3)  215.681 ms
 ```
 
-
 The traceroute to www.ug.edu.gh (197.255.125.244) reveals the path and latency of packets traveling from the source to the destination. The first five hops are within the University of Waterloo's network, as indicated by the low latency and internal IP addresses. These hops represent the initial routers and switches within the university's infrastructure. Hops 6 to 10 transition into the wider internet, specifically within the Rogers and Beanfield ISP networks, as shown by the external IP addresses and slightly higher latency. Hops 11 to 13 continue through the Beanfield network, with some hops showing no response, which is common in traceroute outputs. From hop 14 onwards, the packets travel through various international networks, including NTT and Telecom Italia, with increasing latency as the distance grows. Hops 18 to 27 show the packets entering the African continent, passing through networks like Seabone and WACREN, with significantly higher latency due to the longer distance and possibly less optimized routing. The final hop, 27, reaches the destination at www.ug.edu.gh, confirming the successful delivery of packets to the target server in Ghana.
+
